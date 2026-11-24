@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#050714">
+  <title>PIXEL ORBIT / Material Spaceflight</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main id="app">
+    <canvas id="game" aria-label="2D pixel physics space game"></canvas>
+
+    <div id="ui">
+      <header class="topbar frame">
+        <div class="brand">
+          <span class="brand-mark">▰▰</span>
+          <span class="brand-name">PIXEL ORBIT</span>
+          <span class="brand-sub">MATERIAL SPACEFLIGHT ENGINE</span>
+        </div>
+        <div class="top-readouts">
+          <span>CR <b id="credits">0</b></span>
+          <span>SECTOR <b id="sector">HELIOS DRIFT</b></span>
+          <span>SIM <b id="sim-rate">60 Hz</b></span>
+          <span id="clock">T+00:00</span>
+        </div>
+      </header>
+
+      <section class="left-panel frame" id="ship-panel">
+        <div class="panel-title">FLIGHT SYSTEMS <span id="mode">MANUAL</span></div>
+        <div class="bar-row"><label>HULL</label><div class="bar"><i id="hull-bar"></i></div><output id="hull-val">100%</output></div>
+        <div class="bar-row"><label>FUEL</label><div class="bar"><i id="fuel-bar"></i></div><output id="fuel-val">100%</output></div>
+        <div class="bar-row"><label>ENERGY</label><div class="bar"><i id="energy-bar"></i></div><output id="energy-val">100%</output></div>
+        <div class="bar-row"><label>HEAT</label><div class="bar warm"><i id="heat-bar"></i></div><output id="heat-val">0%</output></div>
+        <div class="divider"></div>
+        <div class="panel-title small">CARGO HOLD <span id="cargo-used">0 / 100</span></div>
+        <div id="cargo-list" class="cargo-list"><span class="dim">ballast only</span></div>
+        <div class="divider"></div>
+        <div class="objective"><span>MISSION</span><p id="objective">Calibrate manual landing on Selene.</p></div>
+      </section>
+
+      <section class="right-panel frame" id="nav-panel">
+        <div class="panel-title">NAV / GRAVITY WELL</div>
+        <h2 id="target-name">DEEP SPACE</h2>
+        <div class="nav-grid">
+          <span>ALT</span><b id="altitude">—</b>
+          <span>VEL</span><b id="speed">0.0 m/s</b>
+          <span>V/S</span><b id="vertical-speed">0.0</b>
+          <span>G</span><b id="gravity">0.00</b>
+          <span>ALIGN</span><b id="alignment">—</b>
+        </div>
+        <div id="landing-state" class="state-line dim">NO CONTACT</div>
+        <div class="divider"></div>
+        <div class="nav-grid compact">
+          <span>TOOL</span><b id="tool-name">GRINDER</b>
+          <span>GEAR</span><b id="gear-state">UP</b>
+          <span>SCOOP</span><b id="scoop-state">OFF</b>
+          <span>THREATS</span><b id="threat-count">0</b>
+        </div>
+        <div id="discovered" class="discovery">SURVEY 0 / 9</div>
+      </section>
+
+      <section id="landing-guide" class="landing-guide hidden">
+        <div class="guide-title">MANUAL DESCENT</div>
+        <div class="guide-row"><span>VERTICAL</span><b id="guide-vs">0.0</b></div>
+        <div class="guide-row"><span>LATERAL</span><b id="guide-hs">0.0</b></div>
+        <div class="guide-row"><span>ATTITUDE</span><b id="guide-align">0%</b></div>
+        <div id="guide-verdict" class="guide-verdict">MAINTAIN THRUST</div>
+      </section>
+
+      <div id="log" class="event-log"></div>
+
+      <footer class="controls frame">
+        <span><kbd>W</kbd><kbd>S</kbd> THRUST</span>
+        <span><kbd>A</kbd><kbd>D</kbd> TORQUE</span>
+        <span><kbd>Q</kbd><kbd>E</kbd> RCS</span>
+        <span><kbd>LMB</kbd> TOOL</span>
+        <span><kbd>SPACE</kbd> CANNON</span>
+        <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> TOOLS</span>
+        <span><kbd>R</kbd> SCOOP</span>
+        <span><kbd>V</kbd> GEAR</span>
+        <span><kbd>WHEEL</kbd> ZOOM</span>
+        <span><kbd>TAB</kbd> MAP</span>
+        <span><kbd>H</kbd> HELP</span>
+      </footer>
+
+      <div id="hint" class="hint">Hold <kbd>LMB</kbd> near terrain to grind. Laser melts monoliths into flowing material.</div>
+
+      <section id="trade" class="modal trade hidden">
+        <div class="modal-header"><span>LOCAL EXCHANGE</span><button data-close="trade" aria-label="Close">×</button></div>
+        <div class="market-name" id="market-name">HALCYON RING</div>
+        <p class="modal-copy" id="market-copy">Dock clamps engaged. Trade requires a low relative velocity.</p>
+        <div class="market-grid" id="market-grid"></div>
+        <div class="market-actions" id="market-actions"></div>
+        <div class="modal-foot">Press <kbd>ESC</kbd> to undock · prices fluctuate with local material integrity</div>
+      </section>
+
+      <section id="help" class="modal help hidden">
+        <div class="modal-header"><span>PILOT REFERENCE</span><button data-close="help" aria-label="Close">×</button></div>
+        <div class="help-columns">
+          <div>
+            <h3>NEWTONIAN FLIGHT</h3>
+            <p><kbd>W</kbd>/<kbd>S</kbd> main and reverse thrust. <kbd>A</kbd>/<kbd>D</kbd> apply torque. <kbd>Q</kbd>/<kbd>E</kbd> fire lateral RCS. Nothing cancels momentum unless you do.</p>
+            <p><kbd>X</kbd> applies counter-torque while held. <kbd>SHIFT</kbd> overthrust burns fuel faster. <kbd>V</kbd> extends landing legs. Land with low vertical and lateral speed, aligned away from the gravity well.</p>
+            <h3>CONTINUOUS WORLD</h3>
+            <p>The camera zooms continuously from system scale to individual material pixels. There is no surface loading screen and no orbit/landing scene split.</p>
+          </div>
+          <div>
+            <h3>MATERIAL TOOLS</h3>
+            <p><kbd>1</kbd> grinder: monoliths become sand-like grains. <kbd>2</kbd> laser: ice becomes water and steam; rock and hull melt into flowing molten pixels. <kbd>3</kbd>/<kbd>SPACE</kbd>: explosive cannon.</p>
+            <p><kbd>LMB</kbd> or <kbd>F</kbd> uses the selected tool toward the cursor. <kbd>R</kbd> energizes the magnetic scoop; magnetic grains and ore dust drift into the hold.</p>
+            <h3>SYSTEM</h3>
+            <p><kbd>TAB</kbd> map, <kbd>T</kbd> trade at a quiet dock, <kbd>B</kbd> gravity-field overlay, <kbd>Z</kbd>/<kbd>C</kbd> zoom, <kbd>0</kbd> auto zoom, <kbd>P</kbd> pause, <kbd>M</kbd> mute.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="map" class="modal map hidden">
+        <div class="modal-header"><span>HELIOS DRIFT / SURVEY MAP</span><button data-close="map" aria-label="Close">×</button></div>
+        <canvas id="map-canvas" width="760" height="430"></canvas>
+        <div class="map-legend"><span>◎ GRAVITY WELL</span><span>△ SHIP</span><span>◇ ANOMALY</span><span class="dim">UNDISCOVERED SIGNATURES ARE DIM</span></div>
+      </section>
+
+      <div id="pause-banner" class="pause-banner hidden">SIMULATION PAUSED</div>
+    </div>
+  </main>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
