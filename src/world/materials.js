@@ -31,7 +31,8 @@ export const MAT = Object.freeze({
   MAGNET_BLOCK: 19,
   LAMP: 20,
   EXOTIC: 21,
-  EXOTIC_DUST: 22
+  EXOTIC_DUST: 22,
+  BIOMASS: 23
 });
 
 const define = (data) => data;
@@ -59,7 +60,8 @@ export const MATERIALS = [
   define({ key: 'MAGNET_BLOCK', name: 'electromagnet', color: '#cb6cf0', phase: PHASE.SOLID, hp: 72, density: 7, magnetic: true, melt: 190, meltTo: MAT.MOLTEN_METAL, grindTo: MAT.SCRAP, emissive: true, alpha: 255 }),
   define({ key: 'LAMP', name: 'landing lamp', color: '#ffd47a', phase: PHASE.SOLID, hp: 20, density: 5, melt: 160, meltTo: MAT.MOLTEN_METAL, grindTo: MAT.SCRAP, emissive: true, alpha: 255 }),
   define({ key: 'EXOTIC', name: 'exotic crystal', color: '#69f6d1', phase: PHASE.SOLID, hp: 90, density: 6, magnetic: true, melt: 205, meltTo: MAT.MOLTEN_METAL, grindTo: MAT.EXOTIC_DUST, commodity: 'exotic', emissive: true, alpha: 255 }),
-  define({ key: 'EXOTIC_DUST', name: 'exotic dust', color: '#a2ffe8', phase: PHASE.GRANULAR, hp: 14, density: 4, magnetic: true, commodity: 'exotic', emissive: true, alpha: 255 })
+  define({ key: 'EXOTIC_DUST', name: 'exotic dust', color: '#a2ffe8', phase: PHASE.GRANULAR, hp: 14, density: 4, magnetic: true, commodity: 'exotic', emissive: true, alpha: 255 }),
+  define({ key: 'BIOMASS', name: 'cave biome', color: '#63f2a2', phase: PHASE.SOLID, hp: 24, density: 4, grindTo: MAT.EXOTIC_DUST, commodity: 'exotic', emissive: true, alpha: 255 })
 ];
 
 export const MATERIAL_COUNT = MATERIALS.length;

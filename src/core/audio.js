@@ -146,6 +146,15 @@ export class AudioEngine {
       case 'alarm':
         this.tone(230, 0.16, 'sawtooth', 0.035, 170);
         break;
+      case 'scan':
+        this.tone(440, 0.16, 'sine', 0.035, 1320);
+        this.tone(880, 0.12, 'square', 0.018, 1480, 0.12);
+        this.noiseBurst(0.22, 1600, 0.025, 'bandpass');
+        break;
+      case 'clamp':
+        this.tone(180, 0.08, 'square', 0.04, 120);
+        this.noiseBurst(0.09, 520, 0.04);
+        break;
       case 'ui':
         this.tone(620, 0.035, 'square', 0.018, 720);
         break;

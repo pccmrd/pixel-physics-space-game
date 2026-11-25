@@ -23,7 +23,7 @@ const DIRS = [
 ];
 const AMBIENT = 8;
 const SUN = norm(-0.72, -0.68, -0.72, -0.68);
-const STRUCTURAL_SOLIDS = [MAT.ROCK, MAT.METAL, MAT.CORE, MAT.ICE, MAT.ORE, MAT.MAGNETITE, MAT.GLASS, MAT.SLAG, MAT.LAMP, MAT.MAGNET_BLOCK, MAT.EXOTIC];
+const STRUCTURAL_SOLIDS = [MAT.ROCK, MAT.METAL, MAT.CORE, MAT.ICE, MAT.ORE, MAT.MAGNETITE, MAT.GLASS, MAT.SLAG, MAT.LAMP, MAT.MAGNET_BLOCK, MAT.EXOTIC, MAT.BIOMASS];
 
 function makeSurface(w, h) {
   if (typeof document === 'undefined' && typeof OffscreenCanvas === 'undefined') return null;
@@ -64,8 +64,15 @@ export class PixelBody {
     this.w = config.w;
     this.h = config.h;
     this.radius = config.radius;
-    this.g0 = config.g0 || 8;
-    this.mu = this.g0 * this.radius * this.radius * 1.08;
+    // Density-based gravity: surface acceleration scales with the radius of the rubble pile,
+    // rather than using lunar-strength numbers for small hauled bodies.
+    const legacyDensity = config.g0 != null
+      ? clamp(config.g0 / Math.max(20, this.radius), 0.012, 1.2)
+      : 0.008;
+    this.density = config.density ?? legacyDensity;
+    this.g0 = clamp(this.density, 0.025, 2.2);
+    this.mu = this.density * this.radius * this.radius * 1.08;
+    this.record = null;
     this.seed = config.seed >>> 0;
     this.glow = config.glow || '#7fc7ff';
     this.market = Boolean(config.market);
@@ -141,6 +148,19 @@ export class PixelBody {
     const dy = ly - this.h / 2;
     const r = rotate(dx, dy, this.cos, this.sin);
     return { x: this.x + r.x, y: this.y + r.y };
+  }
+
+  dockClampPoint() {
+    if (!this.dock) return null;
+    const c = this.dock.clamp || { x: this.dock.x, y: this.dock.y - 3 };
+    return this.localToWorld(c.x, c.y);
+  }
+
+  dockClampNormal() {
+    const c = this.dock?.clamp;
+    const n = c ? norm(c.normalX ?? 0, c.normalY ?? -1, 0, -1) : norm(0, -1, 0, -1);
+    const r = rotate(n.x, n.y, this.cos, this.sin);
+    return norm(r.x, r.y, 0, -1);
   }
 
   sampleWorld(wx, wy) {

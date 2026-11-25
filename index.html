@@ -20,7 +20,7 @@
         </div>
         <div class="top-readouts">
           <span>CR <b id="credits">0</b></span>
-          <span>SECTOR <b id="sector">HELIOS DRIFT</b></span>
+          <span>SECTOR <b id="sector">LUNA ORBIT 2035</b></span>
           <span>SIM <b id="sim-rate">60 Hz</b></span>
           <span id="clock">T+00:00</span>
         </div>
@@ -36,7 +36,7 @@
         <div class="panel-title small">CARGO HOLD <span id="cargo-used">0 / 100</span></div>
         <div id="cargo-list" class="cargo-list"><span class="dim">ballast only</span></div>
         <div class="divider"></div>
-        <div class="objective"><span>MISSION</span><p id="objective">Calibrate manual landing on Selene.</p></div>
+        <div class="objective"><span>MISSION</span><p id="objective">2035 lunar orbit: scan an uncatalogued mass with N, then land manually.</p></div>
       </section>
 
       <section class="right-panel frame" id="nav-panel">
@@ -46,7 +46,7 @@
           <span>ALT</span><b id="altitude">—</b>
           <span>VEL</span><b id="speed">0.0 m/s</b>
           <span>V/S</span><b id="vertical-speed">0.0</b>
-          <span>G</span><b id="gravity">0.00</b>
+          <span>WELL</span><b id="gravity">0.000</b>
           <span>ALIGN</span><b id="alignment">—</b>
         </div>
         <div id="landing-state" class="state-line dim">NO CONTACT</div>
@@ -57,7 +57,7 @@
           <span>SCOOP</span><b id="scoop-state">OFF</b>
           <span>THREATS</span><b id="threat-count">0</b>
         </div>
-        <div id="discovered" class="discovery">SURVEY 0 / 9</div>
+        <div id="discovered" class="discovery">CATALOG 16/320 · UNCAT 304</div>
       </section>
 
       <section id="landing-guide" class="landing-guide hidden">
@@ -74,25 +74,28 @@
         <span><kbd>W</kbd><kbd>S</kbd> THRUST</span>
         <span><kbd>A</kbd><kbd>D</kbd> TORQUE</span>
         <span><kbd>Q</kbd><kbd>E</kbd> RCS</span>
+        <span><kbd>U</kbd><kbd>J</kbd> LANE UP/DOWN</span>
         <span><kbd>LMB</kbd> TOOL</span>
         <span><kbd>SPACE</kbd> CANNON</span>
-        <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> TOOLS</span>
+        <span><kbd>N</kbd> SCAN</span>
+        <span><kbd>O</kbd> ORBIT</span>
+        <span><kbd>G</kbd> EVA</span>
+        <span><kbd>L</kbd> RELEASE CLAMP</span>
         <span><kbd>R</kbd> SCOOP</span>
         <span><kbd>V</kbd> GEAR</span>
-        <span><kbd>WHEEL</kbd> ZOOM</span>
         <span><kbd>TAB</kbd> MAP</span>
         <span><kbd>H</kbd> HELP</span>
       </footer>
 
-      <div id="hint" class="hint">Hold <kbd>LMB</kbd> near terrain to grind. Laser melts monoliths into flowing material.</div>
+      <div id="hint" class="hint">Luna orbit, 2035: scan with <kbd>N</kbd>, hold a slow orbit with <kbd>O</kbd>, then <kbd>G</kbd> for EVA caves. No loading screens.</div>
 
       <section id="trade" class="modal trade hidden">
         <div class="modal-header"><span>LOCAL EXCHANGE</span><button data-close="trade" aria-label="Close">×</button></div>
         <div class="market-name" id="market-name">HALCYON RING</div>
-        <p class="modal-copy" id="market-copy">Dock clamps engaged. Trade requires a low relative velocity.</p>
+        <p class="modal-copy" id="market-copy">Electromagnetic pad clamps hold the ship steady. Press L or ESC to release.</p>
         <div class="market-grid" id="market-grid"></div>
         <div class="market-actions" id="market-actions"></div>
-        <div class="modal-foot">Press <kbd>ESC</kbd> to undock · prices fluctuate with local material integrity</div>
+        <div class="modal-foot">Press <kbd>L</kbd> or <kbd>ESC</kbd> to release clamps · prices follow local material integrity</div>
       </section>
 
       <section id="help" class="modal help hidden">
@@ -101,24 +104,26 @@
           <div>
             <h3>NEWTONIAN FLIGHT</h3>
             <p><kbd>W</kbd>/<kbd>S</kbd> main and reverse thrust. <kbd>A</kbd>/<kbd>D</kbd> apply torque. <kbd>Q</kbd>/<kbd>E</kbd> fire lateral RCS. Nothing cancels momentum unless you do.</p>
-            <p><kbd>X</kbd> applies counter-torque while held. <kbd>SHIFT</kbd> overthrust burns fuel faster. <kbd>V</kbd> extends landing legs. Land with low vertical and lateral speed, aligned away from the gravity well.</p>
-            <h3>CONTINUOUS WORLD</h3>
-            <p>The camera zooms continuously from system scale to individual material pixels. There is no surface loading screen and no orbit/landing scene split.</p>
+            <p><kbd>X</kbd> applies counter-torque while held. <kbd>SHIFT</kbd> overthrust burns fuel faster. <kbd>V</kbd> extends landing legs. <kbd>U</kbd>/<kbd>J</kbd> drive outward/inward across lunar orbital lanes.</p>
+            <h3>CONTINUOUS LUNA ORBIT</h3>
+            <p>In 2035, hundreds of hauled asteroids and comet cores orbit the Moon; 95% are uncatalogued. Automatic haulers deliver more without loading. We do not land on the Moon: the belt is the destination. A precise pad landing engages electromagnetic clamps; <kbd>L</kbd> releases them.</p>
           </div>
           <div>
             <h3>MATERIAL TOOLS</h3>
             <p><kbd>1</kbd> grinder: monoliths become sand-like grains. <kbd>2</kbd> laser: ice becomes water and steam; rock and hull melt into flowing molten pixels. <kbd>3</kbd>/<kbd>SPACE</kbd>: explosive cannon.</p>
             <p><kbd>LMB</kbd> or <kbd>F</kbd> uses the selected tool toward the cursor. <kbd>R</kbd> energizes the magnetic scoop; magnetic grains and ore dust drift into the hold.</p>
+            <h3>SCAN, CAPTURE, EXPLORE</h3>
+            <p><kbd>N</kbd> scans nearby uncatalogued masses for minerals, cave biomes and crashed derelicts. <kbd>O</kbd> holds a slow orbit around an asteroid; <kbd>G</kbd> deploys an EVA tether into caves. <kbd>F</kbd>/<kbd>LMB</kbd> samples material while on EVA.</p>
             <h3>SYSTEM</h3>
-            <p><kbd>TAB</kbd> map, <kbd>T</kbd> trade at a quiet dock, <kbd>B</kbd> gravity-field overlay, <kbd>Z</kbd>/<kbd>C</kbd> zoom, <kbd>0</kbd> auto zoom, <kbd>P</kbd> pause, <kbd>M</kbd> mute.</p>
+            <p><kbd>TAB</kbd> map, <kbd>T</kbd> trade, <kbd>L</kbd> release clamps, <kbd>B</kbd> gravity-field overlay, <kbd>Z</kbd>/<kbd>C</kbd> zoom, <kbd>0</kbd> auto zoom, <kbd>P</kbd> pause, <kbd>M</kbd> mute.</p>
           </div>
         </div>
       </section>
 
       <section id="map" class="modal map hidden">
-        <div class="modal-header"><span>HELIOS DRIFT / SURVEY MAP</span><button data-close="map" aria-label="Close">×</button></div>
+        <div class="modal-header"><span>LUNA ORBIT / 2035 SURVEY MAP</span><button data-close="map" aria-label="Close">×</button></div>
         <canvas id="map-canvas" width="760" height="430"></canvas>
-        <div class="map-legend"><span>◎ GRAVITY WELL</span><span>△ SHIP</span><span>◇ ANOMALY</span><span class="dim">UNDISCOVERED SIGNATURES ARE DIM</span></div>
+        <div class="map-legend"><span>◎ HAULED BODY</span><span>△ SHIP</span><span>◇ ANOMALY</span><span class="dim">95% UNCATALOGUED · N TO SCAN</span></div>
       </section>
 
       <div id="pause-banner" class="pause-banner hidden">SIMULATION PAUSED</div>

@@ -153,14 +153,33 @@ export class UI {
     }
     ctx.globalAlpha = 1;
 
-    ctx.strokeStyle = 'rgba(90, 160, 190, 0.12)';
+    ctx.strokeStyle = 'rgba(90, 160, 190, 0.10)';
     ctx.lineWidth = 1;
-    for (let x = -1500; x <= 1500; x += 500) {
+    for (let x = -8000; x <= 8000; x += 2000) {
       ctx.beginPath(); ctx.moveTo(sx(x), 0); ctx.lineTo(sx(x), H); ctx.stroke();
     }
-    for (let y = -1000; y <= 1000; y += 500) {
+    for (let y = -8000; y <= 8000; y += 2000) {
       ctx.beginPath(); ctx.moveTo(0, sy(y)); ctx.lineTo(W, sy(y)); ctx.stroke();
     }
+
+    // Luna and the continuous hauled-asteroid belt.
+    const mx = sx(world.moon.x);
+    const my = sy(world.moon.y);
+    const mr = world.moon.radius * scale;
+    const moonGrad = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.08, mx, my, mr);
+    moonGrad.addColorStop(0, 'rgba(200,220,240,0.42)');
+    moonGrad.addColorStop(1, 'rgba(40,54,76,0.16)');
+    ctx.fillStyle = moonGrad;
+    ctx.beginPath(); ctx.arc(mx, my, mr, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(180,215,245,0.28)';
+    ctx.stroke();
+    ctx.save();
+    ctx.setLineDash([4, 7]);
+    ctx.strokeStyle = 'rgba(140,234,255,0.25)';
+    for (const r of [world.belt.radius - world.belt.width / 2, world.belt.radius, world.belt.radius + world.belt.width / 2]) {
+      ctx.beginPath(); ctx.arc(mx, my, r * scale, 0, TAU); ctx.stroke();
+    }
+    ctx.restore();
 
     const sunX = clamp(sx(world.star.x), 14, W - 14);
     const sunY = clamp(sy(world.star.y), 14, H - 14);
@@ -173,34 +192,43 @@ export class UI {
     ctx.fillStyle = '#ffd38a';
     ctx.fillRect(sunX - 2, sunY - 2, 4, 4);
 
-    for (const body of world.bodies) {
-      const x = sx(body.x);
-      const y = sy(body.y);
-      const r = Math.max(4, body.radius * scale);
-      const known = body.discovered;
+    for (const hauler of world.haulers) {
+      const tow = world.recordsById.get(hauler.towId);
       ctx.save();
-      ctx.globalAlpha = known ? 1 : 0.35;
-      ctx.strokeStyle = body.glow;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 5]);
-      for (let ring = 1; ring <= 3; ring++) {
-        ctx.globalAlpha = (known ? 0.22 : 0.08) / ring;
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = '#ffc66d';
+      ctx.setLineDash([2, 4]);
+      if (tow) {
         ctx.beginPath();
-        ctx.arc(x, y, r * (1.3 + ring * 0.55), 0, TAU);
+        ctx.moveTo(sx(hauler.x), sy(hauler.y));
+        ctx.lineTo(sx(tow.x), sy(tow.y));
         ctx.stroke();
       }
       ctx.setLineDash([]);
-      ctx.globalAlpha = known ? 0.95 : 0.3;
+      ctx.fillStyle = '#ffc66d';
+      ctx.fillRect(sx(hauler.x) - 2, sy(hauler.y) - 2, 4, 4);
+      ctx.restore();
+    }
+
+    for (const body of world.tracked) {
+      const x = sx(body.x);
+      const y = sy(body.y);
+      const r = Math.max(2, body.radius * scale);
+      const known = body.catalogued || body.scanned;
+      const visible = known || body.discovered;
+      ctx.save();
+      ctx.globalAlpha = known ? 0.95 : visible ? 0.38 : 0.16;
+      ctx.strokeStyle = known ? body.glow : '#405263';
       ctx.fillStyle = known ? body.glow : '#405263';
+      ctx.lineWidth = 1;
       if (body.type === 'station') {
         ctx.strokeRect(x - r * 0.8, y - r * 0.8, r * 1.6, r * 1.6);
         ctx.fillRect(x - r * 0.42, y - r * 0.42, r * 0.84, r * 0.84);
       } else if (body.type === 'comet') {
-        const tail = world.tailDirectionFor(body);
         ctx.beginPath();
-        ctx.moveTo(x + tail.x * r * 2.6, y + tail.y * r * 2.6);
-        ctx.lineTo(x - tail.y * r * 0.7, y + tail.x * r * 0.7);
-        ctx.lineTo(x + tail.y * r * 0.7, y - tail.x * r * 0.7);
+        ctx.moveTo(x + r * 2.2, y);
+        ctx.lineTo(x - r * 0.4, y - r * 0.7);
+        ctx.lineTo(x - r * 0.4, y + r * 0.7);
         ctx.closePath();
         ctx.fill();
       } else {
@@ -208,11 +236,13 @@ export class UI {
         ctx.arc(x, y, r * 0.65, 0, TAU);
         ctx.fill();
       }
-      ctx.globalAlpha = known ? 1 : 0.5;
-      ctx.fillStyle = known ? '#dff8ff' : '#7a94a4';
-      ctx.font = '10px "Courier New", monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(known ? body.name : 'UNSURVEYED', x, y + r + 15);
+      if (known && (body.featured || r > 4)) {
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#dff8ff';
+        ctx.font = '9px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(body.name, x, y + r + 13);
+      }
       ctx.restore();
     }
 
@@ -271,6 +301,12 @@ export class UI {
     ctx.moveTo(px, py);
     ctx.lineTo(px + ship.vx * 0.32 * scale, py + ship.vy * 0.32 * scale);
     ctx.stroke();
+
+    const stats = world.catalogStats();
+    ctx.fillStyle = '#8ceaff';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`YEAR ${stats.year} · CATALOG ${stats.catalogued}/${stats.total} · UNCATALOGUED ${stats.uncatalogued}`, 16, 20);
   }
 
   updateLandingGuide(game) {
@@ -284,7 +320,13 @@ export class UI {
     this.setText('guideAlign', percent(Math.max(0, m.align) * 100));
     let verdict = 'LANDING WINDOW';
     let tone = 'good';
-    if (ship.landed) {
+    if (ship.eva?.active) {
+      verdict = 'EVA TETHER ACTIVE';
+    } else if (ship.orbitHold) {
+      verdict = 'SLOW ORBIT HOLD';
+    } else if (ship.clamped) {
+      verdict = 'PAD CLAMP HOLD · L RELEASE';
+    } else if (ship.landed) {
       verdict = 'SURFACE HOLD';
     } else if (m.vertical > 6) {
       verdict = 'DESCENT TOO FAST';
@@ -333,8 +375,12 @@ export class UI {
     this.setText('clock', formatTime(game.time));
     this.setText('simRate', `${Math.round(simRate)} Hz`);
     const nav = ship.metrics?.body || world.nearestBody(ship.x, ship.y).body;
-    this.setText('sector', nav?.name || 'HELIOS DRIFT');
-    this.setText('mode', ship.landed ? 'SURFACE' : ship.docked?.ready ? 'DOCKED' : ship.scoop ? 'SCOOP' : 'MANUAL');
+    const navKnown = nav?.catalogued || nav?.scanned;
+    this.setText('sector', navKnown ? nav.name : 'LUNA ORBIT / UNCATALOGUED');
+    const mode = ship.eva?.active ? 'EVA' : ship.orbitHold ? 'ORBIT HOLD' : ship.clamped ? 'PAD CLAMP' :
+      ship.landed ? 'SURFACE' : ship.docked?.ready ? 'DOCKED' : ship.laneDrive ? `LANE ${ship.laneDrive > 0 ? 'UP' : 'DOWN'}` :
+      ship.scoop ? 'SCOOP' : 'MANUAL';
+    this.setText('mode', mode);
 
     this.setBar('hullBar', 'hullVal', ship.hull, ship.hull < 30);
     this.setBar('fuelBar', 'fuelVal', ship.fuel, ship.fuel < 18);
@@ -356,12 +402,21 @@ export class UI {
     this.setText('altitude', m ? formatDistance(m.altitude) : '—');
     this.setText('speed', m ? `${m.speed.toFixed(1)} m/s` : '0.0 m/s');
     this.setText('verticalSpeed', m ? `${m.vertical >= 0 ? '+' : ''}${m.vertical.toFixed(1)}` : '0.0');
-    this.setText('gravity', m ? `${m.gravity.toFixed(2)} g` : '0.00');
+    this.setText('gravity', m ? `${m.gravity.toFixed(3)}` : '0.000');
     this.setText('alignment', m ? percent(Math.max(0, m.align) * 100) : '—');
 
     let state = 'NO CONTACT';
     let stateTone = 'dim';
-    if (ship.docked?.ready) {
+    if (ship.eva?.active) {
+      state = `EVA · O₂ ${ship.eva.oxygen.toFixed(0)}% · TETHER ${Math.hypot(ship.x - ship.eva.x, ship.y - ship.eva.y).toFixed(0)} m`;
+      stateTone = 'good';
+    } else if (ship.orbitHold) {
+      state = 'SLOW ORBIT HOLD · G FOR EVA · O TO RELEASE';
+      stateTone = 'good';
+    } else if (ship.clamped || ship.docked?.clamped) {
+      state = `PAD CLAMP · ${ship.docked?.body?.name || ship.padClamp?.body?.name || 'EXCHANGE'} · T TRADE / L RELEASE`;
+      stateTone = 'good';
+    } else if (ship.docked?.ready) {
       state = `DOCKED · ${ship.docked.body.name} · PRESS T TO TRADE`;
       stateTone = 'good';
     } else if (ship.landed && ship.landedBody) {
@@ -384,8 +439,8 @@ export class UI {
     this.setText('gearState', ship.gear ? 'DOWN' : 'UP');
     this.setText('scoopState', ship.scoop ? `ON · MAG ${ship.magnetLevel}` : 'OFF');
     this.setText('threatCount', `${combat.threatsNear(ship, 1000)}`);
-    const discovery = world.discoveryCount();
-    this.setText('discovered', `SURVEY ${discovery.total} / ${discovery.max}`);
+    const catalog = world.catalogStats();
+    this.setText('discovered', `CATALOG ${catalog.catalogued}/${catalog.total} · UNCAT ${catalog.uncatalogued}`);
     this.updateLandingGuide(game);
   }
 }
