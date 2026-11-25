@@ -133,6 +133,65 @@ export class Background {
     }
     ctx.globalAlpha = 1;
 
+    // Luna is a distant, beautiful no-landing landmark: the gameplay belt orbits it.
+    if (world?.moon && camera?.zoom) {
+      const mx = W / 2 + (world.moon.x - camera.x) * camera.zoom;
+      const my = H / 2 + (world.moon.y - camera.y) * camera.zoom;
+      const R = world.moon.radius * camera.zoom;
+      if (mx + R > -120 && mx - R < W + 120 && my + R > -120 && my - R < H + 120 && R > 2) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        const disc = ctx.createRadialGradient(mx - R * 0.32, my - R * 0.28, R * 0.08, mx, my, R);
+        disc.addColorStop(0, 'rgba(220,232,244,0.95)');
+        disc.addColorStop(0.48, 'rgba(142,160,180,0.86)');
+        disc.addColorStop(1, 'rgba(40,53,72,0.92)');
+        ctx.fillStyle = disc;
+        ctx.beginPath();
+        ctx.arc(mx, my, R, 0, TAU);
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(mx, my, R, 0, TAU);
+        ctx.clip();
+        ctx.globalAlpha = 0.13;
+        ctx.fillStyle = '#172236';
+        for (let k = 0; k < 22; k++) {
+          const a = k * 2.399 + 0.7;
+          const d = Math.sqrt((k + 1) / 24) * R * 0.76;
+          const cr = R * (0.018 + ((k * 7) % 5) * 0.007);
+          ctx.beginPath();
+          ctx.arc(mx + Math.cos(a) * d, my + Math.sin(a) * d, cr, 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 0.72;
+        ctx.fillStyle = '#040817';
+        ctx.beginPath();
+        ctx.arc(mx + R * 0.48, my - R * 0.08, R * 0.94, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.12;
+        ctx.strokeStyle = '#b8d9ff';
+        ctx.lineWidth = Math.max(1, R * 0.012);
+        ctx.beginPath();
+        ctx.arc(mx, my, R, 0, TAU);
+        ctx.stroke();
+        if (R > 80) {
+          const ex = mx - R * 0.92;
+          const ey = my - R * 0.62;
+          ctx.globalAlpha = 0.75;
+          ctx.fillStyle = '#5aaeff';
+          ctx.fillRect(ex - 2, ey - 2, 4, 4);
+          ctx.globalAlpha = 0.32;
+          ctx.fillStyle = '#b9e0ff';
+          ctx.fillRect(ex - 5, ey - 1, 10, 1);
+        }
+        ctx.restore();
+      }
+    }
+
     const sx = W / 2 + (world.star.x - camera.x) * 0.06;
     const sy = H / 2 + (world.star.y - camera.y) * 0.06;
     if (sx > -180 && sx < W + 180 && sy > -180 && sy < H + 180) {

@@ -12,47 +12,67 @@ function hexToRgba(hex, alpha) {
 
 function createShipSprite() {
   const canvas = document.createElement('canvas');
-  canvas.width = 32;
-  canvas.height = 20;
+  canvas.width = 44;
+  canvas.height = 28;
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  ctx.clearRect(0, 0, 32, 20);
+  ctx.clearRect(0, 0, 44, 28);
 
-  // Silhouette and wing structure.
-  ctx.fillStyle = '#0b1424';
+  // Chunky silhouette: long nose, two engine pods, folded wings and an EVA airlock.
+  ctx.fillStyle = '#09111f';
   ctx.beginPath();
-  ctx.moveTo(2, 7); ctx.lineTo(20, 5); ctx.lineTo(30, 10); ctx.lineTo(20, 15); ctx.lineTo(2, 13);
-  ctx.lineTo(5, 3); ctx.lineTo(18, 3); ctx.lineTo(21, 7); ctx.lineTo(21, 13); ctx.lineTo(18, 17); ctx.lineTo(5, 17);
-  ctx.closePath();
+  ctx.moveTo(2, 10); ctx.lineTo(10, 7); ctx.lineTo(30, 7); ctx.lineTo(42, 13);
+  ctx.lineTo(42, 15); ctx.lineTo(30, 21); ctx.lineTo(10, 21); ctx.lineTo(2, 18);
+  ctx.lineTo(5, 14); ctx.closePath();
   ctx.fill();
+  ctx.fillRect(8, 3, 19, 5);
+  ctx.fillRect(8, 20, 19, 5);
+  ctx.fillRect(2, 8, 8, 4);
+  ctx.fillRect(2, 16, 8, 4);
 
-  ctx.fillStyle = '#40566e';
-  ctx.fillRect(4, 8, 22, 4);
-  ctx.fillRect(7, 5, 14, 2);
-  ctx.fillRect(7, 13, 14, 2);
-  ctx.fillStyle = '#8aa2b6';
-  ctx.fillRect(6, 8, 18, 1);
-  ctx.fillRect(8, 7, 13, 1);
-  ctx.fillRect(8, 12, 13, 1);
-  ctx.fillStyle = '#29415a';
-  ctx.fillRect(3, 9, 4, 2);
-  ctx.fillRect(7, 4, 9, 1);
-  ctx.fillRect(7, 15, 9, 1);
+  ctx.fillStyle = '#253b53';
+  ctx.fillRect(7, 9, 29, 10);
+  ctx.fillRect(10, 4, 15, 3);
+  ctx.fillRect(10, 21, 15, 3);
+  ctx.fillRect(3, 9, 6, 3);
+  ctx.fillRect(3, 16, 6, 3);
+  ctx.fillStyle = '#405f7a';
+  ctx.fillRect(9, 10, 25, 2);
+  ctx.fillRect(9, 16, 25, 2);
+  ctx.fillRect(13, 5, 9, 1);
+  ctx.fillRect(13, 22, 9, 1);
 
-  ctx.fillStyle = '#1b2c42';
-  ctx.fillRect(16, 7, 10, 6);
+  // Cockpit, sensor glass and tiny navigation lights.
+  ctx.fillStyle = '#16334a';
+  ctx.fillRect(26, 9, 10, 10);
   ctx.fillStyle = '#62dfff';
-  ctx.fillRect(18, 8, 7, 4);
+  ctx.fillRect(28, 10, 7, 6);
   ctx.fillStyle = '#d7fbff';
-  ctx.fillRect(19, 8, 3, 1);
-  ctx.fillStyle = '#ffc66d';
-  ctx.fillRect(27, 9, 3, 2);
-  ctx.fillStyle = '#ff7a45';
-  ctx.fillRect(1, 8, 3, 1);
-  ctx.fillRect(1, 11, 3, 1);
+  ctx.fillRect(29, 10, 4, 1);
+  ctx.fillRect(34, 12, 2, 1);
   ctx.fillStyle = '#8ceaff';
-  ctx.fillRect(10, 2, 5, 1);
-  ctx.fillRect(10, 17, 5, 1);
+  ctx.fillRect(19, 2, 5, 1);
+  ctx.fillRect(19, 25, 5, 1);
+  ctx.fillStyle = '#ffc66d';
+  ctx.fillRect(40, 12, 3, 2);
+  ctx.fillStyle = '#ff7a45';
+  ctx.fillRect(1, 10, 3, 1);
+  ctx.fillRect(1, 17, 3, 1);
+
+  // Hull plates, cargo markings and a lit EVA hatch.
+  ctx.fillStyle = '#172940';
+  ctx.fillRect(11, 12, 12, 4);
+  ctx.fillRect(11, 13, 8, 1);
+  ctx.fillStyle = '#7994a8';
+  ctx.fillRect(13, 12, 1, 4);
+  ctx.fillRect(18, 12, 1, 4);
+  ctx.fillStyle = '#ffd47a';
+  ctx.fillRect(16, 11, 2, 1);
+  ctx.fillRect(16, 16, 2, 1);
+  ctx.fillStyle = '#8affc1';
+  ctx.fillRect(23, 12, 2, 4);
+  ctx.fillStyle = '#0e1929';
+  ctx.fillRect(24, 13, 1, 2);
   return canvas;
 }
 
@@ -177,6 +197,156 @@ export class Renderer {
     this.camera.shake = Math.max(0, this.camera.shake - dt * 9);
   }
 
+  objectVisible(object, radius, margin = 1.4) {
+    const halfW = this.canvas.width / (2 * this.camera.zoom);
+    const halfH = this.canvas.height / (2 * this.camera.zoom);
+    const r = radius * margin;
+    return object.x + r > this.camera.x - halfW && object.x - r < this.camera.x + halfW
+      && object.y + r > this.camera.y - halfH && object.y - r < this.camera.y + halfH;
+  }
+
+  drawOrbitLanes(ctx, world, time) {
+    if (!world?.moon || !world?.belt || this.camera.zoom > 1.2) return;
+    const zoom = this.camera.zoom;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = Math.max(0.45, 0.9 / zoom);
+    ctx.setLineDash([10 / zoom, 18 / zoom]);
+    for (const [radius, alpha] of [
+      [world.belt.radius - world.belt.width / 2, 0.10],
+      [world.belt.radius, 0.16],
+      [world.belt.radius + world.belt.width / 2, 0.10]
+    ]) {
+      ctx.globalAlpha = alpha + Math.sin(time * 0.25 + radius * 0.001) * 0.025;
+      ctx.strokeStyle = '#8ceaff';
+      ctx.beginPath();
+      ctx.arc(world.moon.x, world.moon.y, radius, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.045;
+    for (let k = 0; k < 16; k++) {
+      const a = k * TAU / 16;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * (world.belt.radius - world.belt.width / 2), Math.sin(a) * (world.belt.radius - world.belt.width / 2));
+      ctx.lineTo(Math.cos(a) * (world.belt.radius + world.belt.width / 2), Math.sin(a) * (world.belt.radius + world.belt.width / 2));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  drawProxies(ctx, world, time) {
+    if (!world?.tracked) return;
+    const zoom = this.camera.zoom;
+    for (const record of world.tracked) {
+      if (record.active) continue;
+      const r = record.radius;
+      if (!this.objectVisible(record, r, 2.2)) continue;
+      const known = record.catalogued || record.scanned;
+      ctx.save();
+      ctx.translate(record.x, record.y);
+      ctx.rotate(record.rotation + Math.sin(time * 0.00003 + record.seed) * 0.02);
+      if (record.type === 'comet') {
+        const tail = world.tailDirectionFor(record);
+        ctx.save();
+        ctx.rotate(Math.atan2(tail.y, tail.x));
+        ctx.globalAlpha = known ? 0.16 : 0.07;
+        ctx.fillStyle = '#8beaff';
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.6, -r * 0.25);
+        ctx.lineTo(r * 3.4, -r * 0.75);
+        ctx.lineTo(r * 3.4, r * 0.75);
+        ctx.lineTo(-r * 0.6, r * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.beginPath();
+      const steps = 12;
+      for (let k = 0; k <= steps; k++) {
+        const a = k * TAU / steps;
+        const jitter = 0.78 + 0.16 * Math.sin(record.seed * 0.0007 + k * 2.31) + 0.06 * Math.cos(record.seed * 0.0013 + k * 4.7);
+        const x = Math.cos(a) * r * jitter;
+        const y = Math.sin(a) * r * jitter;
+        if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.globalAlpha = known ? 0.86 : 0.48;
+      ctx.fillStyle = known ? hexToRgba(record.glow, 0.22) : '#263344';
+      ctx.strokeStyle = known ? hexToRgba(record.glow, 0.65) : 'rgba(120,150,170,0.28)';
+      ctx.lineWidth = Math.max(0.45, 0.8 / zoom);
+      ctx.fill();
+      ctx.stroke();
+      if (r > 18 && known) {
+        ctx.globalAlpha = 0.16;
+        ctx.fillStyle = '#050a14';
+        for (let k = 0; k < 3; k++) {
+          const a = record.seed * 0.002 + k * 2.2;
+          const d = r * (0.22 + k * 0.13);
+          ctx.beginPath();
+          ctx.arc(Math.cos(a) * d, Math.sin(a) * d, Math.max(1, r * 0.08), 0, TAU);
+          ctx.fill();
+        }
+      }
+      if (record.survey?.derelict && record.scanned) {
+        ctx.globalAlpha = 0.85;
+        ctx.strokeStyle = '#ffc66d';
+        ctx.lineWidth = Math.max(0.8, 1.5 / zoom);
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.35, r * 0.4);
+        ctx.lineTo(r * 0.25, -r * 0.1);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  drawHaulers(ctx, world, time) {
+    if (!world?.haulers) return;
+    const zoom = this.camera.zoom;
+    for (const hauler of world.haulers) {
+      if (!this.objectVisible(hauler, 24, 5)) continue;
+      const tow = world.recordsById.get(hauler.towId);
+      if (tow) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.18;
+        ctx.strokeStyle = '#ffc66d';
+        ctx.lineWidth = Math.max(0.45, 0.8 / zoom);
+        ctx.setLineDash([4 / zoom, 7 / zoom]);
+        ctx.beginPath();
+        ctx.moveTo(hauler.x, hauler.y);
+        ctx.lineTo(tow.x, tow.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+      const angle = Math.atan2(hauler.vy, hauler.vx);
+      ctx.save();
+      ctx.translate(hauler.x, hauler.y);
+      ctx.rotate(angle);
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = '#17263a';
+      ctx.fillRect(-12, -5, 24, 10);
+      ctx.fillStyle = '#526b82';
+      ctx.fillRect(-8, -4, 14, 2);
+      ctx.fillRect(-8, 2, 14, 2);
+      ctx.fillStyle = '#ffc66d';
+      ctx.fillRect(8, -2, 5, 4);
+      ctx.fillStyle = '#8ceaff';
+      ctx.fillRect(-14, -2, 2, 4);
+      ctx.fillStyle = '#2d4358';
+      ctx.fillRect(-27, -7, 12, 14);
+      ctx.strokeStyle = '#8aa6b9';
+      ctx.lineWidth = Math.max(0.5, 0.7 / zoom);
+      ctx.strokeRect(-27, -7, 12, 14);
+      ctx.globalAlpha = 0.35 + Math.sin(time * 3 + hauler.phase) * 0.1;
+      ctx.fillStyle = '#ffb15c';
+      ctx.fillRect(-16, -2, 4, 4);
+      ctx.restore();
+    }
+  }
+
   bodyVisible(body, margin = 1.4) {
     const halfW = this.canvas.width / (2 * this.camera.zoom);
     const halfH = this.canvas.height / (2 * this.camera.zoom);
@@ -228,12 +398,13 @@ export class Renderer {
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = Math.max(0.6, 1 / this.camera.zoom);
     ctx.setLineDash([4 / this.camera.zoom, 9 / this.camera.zoom]);
-    for (const body of this.world.bodies) {
-      if (!body.discovered || !this.bodyVisible(body, 4)) continue;
+    for (const record of this.world.tracked) {
+      if (!record.discovered && !record.catalogued) continue;
+      if (!this.objectVisible(record, record.radius * 3.2, 1)) continue;
       for (let k = 1; k <= 3; k++) {
-        ctx.strokeStyle = hexToRgba(body.glow, 0.055 / k);
+        ctx.strokeStyle = hexToRgba(record.glow, (record.catalogued ? 0.042 : 0.022) / k);
         ctx.beginPath();
-        ctx.arc(body.x, body.y, body.radius * (1.35 + k * 0.65), 0, TAU);
+        ctx.arc(record.x, record.y, record.radius * (1.35 + k * 0.65), 0, TAU);
         ctx.stroke();
       }
     }
@@ -254,13 +425,13 @@ export class Renderer {
       for (let y = Math.floor((this.camera.y - halfH) / step) * step; y < this.camera.y + halfH + step; y += step) {
         const g = this.world.gravityAt(x, y);
         const mag = g.magnitude;
-        if (mag < 0.08) continue;
+        if (mag < 0.006) continue;
         const d = norm(g.x, g.y, 1, 0);
-        const screenLen = clamp(mag * 1.2, 3, 23);
+        const screenLen = clamp(mag * 30, 3, 26);
         const l = screenLen / zoom;
         const ex = x + d.x * l;
         const ey = y + d.y * l;
-        ctx.strokeStyle = `rgba(255,198,109,${clamp(0.08 + mag * 0.007, 0.08, 0.22)})`;
+        ctx.strokeStyle = `rgba(255,198,109,${clamp(0.08 + mag * 0.12, 0.08, 0.3)})`;
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(ex, ey);
@@ -281,15 +452,15 @@ export class Renderer {
   drawBodyGlows(ctx) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    for (const body of this.world.bodies) {
-      if (!this.bodyVisible(body, 2.5)) continue;
-      const r = body.radius * 2.4;
-      const grad = ctx.createRadialGradient(body.x, body.y, body.radius * 0.2, body.x, body.y, r);
-      grad.addColorStop(0, hexToRgba(body.glow, body.type === 'station' ? 0.10 : 0.07));
-      grad.addColorStop(0.35, hexToRgba(body.glow, 0.035));
-      grad.addColorStop(1, hexToRgba(body.glow, 0));
+    for (const record of this.world.tracked) {
+      const r = record.radius * 2.4;
+      if (!this.objectVisible(record, r, 1)) continue;
+      const grad = ctx.createRadialGradient(record.x, record.y, record.radius * 0.2, record.x, record.y, r);
+      grad.addColorStop(0, hexToRgba(record.glow, record.type === 'station' ? 0.09 : 0.055));
+      grad.addColorStop(0.35, hexToRgba(record.glow, 0.026));
+      grad.addColorStop(1, hexToRgba(record.glow, 0));
       ctx.fillStyle = grad;
-      ctx.fillRect(body.x - r, body.y - r, r * 2, r * 2);
+      ctx.fillRect(record.x - r, record.y - r, r * 2, r * 2);
     }
     ctx.restore();
   }
@@ -309,8 +480,8 @@ export class Renderer {
   drawHotCells(ctx, game) {
     const zoom = this.camera.zoom;
     if (zoom < 0.62) return;
-    const body = game.ship.metrics?.body;
-    if (!body || !this.bodyVisible(body, 1.3)) return;
+    const body = game.ship.metrics?.detail || game.ship.contactBody;
+    if (!body || !body.surface || !this.bodyVisible(body, 1.3)) return;
     const step = zoom > 1.2 ? 2 : 3;
     const size = Math.max(1.2, 2.1 / zoom);
     let count = 0;
@@ -321,7 +492,7 @@ export class Renderer {
         const i = body.index(x, y);
         const m = body.mat[i];
         const hot = body.heat[i] > 118;
-        const emissive = info(m).emissive || m === MAT.MAGNET_BLOCK || m === MAT.LAMP;
+        const emissive = info(m).emissive || m === MAT.MAGNET_BLOCK || m === MAT.LAMP || m === MAT.BIOMASS;
         if (!hot && !emissive) continue;
         const p = body.localToWorld(x + 0.5, y + 0.5);
         const color = hot ? '#ff9a4a' : (info(m).color || '#8ceaff');
@@ -365,10 +536,12 @@ export class Renderer {
         ctx.rotate(body.rotation);
         ctx.translate(-body.w / 2, -body.h / 2);
         const d = body.dock;
+        const padY = d.clamp ? d.clamp.y + 12 : d.y + 10;
+        const width = d.clamp?.width || d.width;
         ctx.globalAlpha = 0.45 + Math.sin(time * 2) * 0.12;
         ctx.strokeStyle = '#8ceaff';
         ctx.lineWidth = Math.max(0.7, 1 / zoom);
-        ctx.strokeRect(d.x - d.width / 2, d.y + 5, d.width, 10);
+        ctx.strokeRect(d.x - width / 2, padY, width, 8);
         ctx.restore();
       }
     }
@@ -408,17 +581,20 @@ export class Renderer {
   drawAimLine(ctx, game) {
     if (!game.aimPoint || game.beam?.active || game.trade.open) return;
     const ship = game.ship;
-    const d = norm(game.aimPoint.x - ship.x, game.aimPoint.y - ship.y, Math.cos(ship.angle), Math.sin(ship.angle));
-    const maxLen = ship.tool === 'laser' ? 110 : ship.tool === 'grinder' ? 42 : 240;
-    const ex = ship.x + d.x * maxLen;
-    const ey = ship.y + d.y * maxLen;
+    const origin = ship.eva?.active ? ship.eva : ship;
+    const d = norm(game.aimPoint.x - origin.x, game.aimPoint.y - origin.y, Math.cos(ship.angle), Math.sin(ship.angle));
+    const eva = Boolean(ship.eva?.active);
+    const maxLen = eva ? 34 : ship.tool === 'laser' ? 110 : ship.tool === 'grinder' ? 42 : 240;
+    const nose = eva ? 4 : 15;
+    const ex = origin.x + d.x * maxLen;
+    const ey = origin.y + d.y * maxLen;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = ship.tool === 'laser' ? 'rgba(255,180,90,0.18)' : 'rgba(140,234,255,0.14)';
     ctx.lineWidth = Math.max(0.5, 1 / this.camera.zoom);
     ctx.setLineDash([2 / this.camera.zoom, 7 / this.camera.zoom]);
     ctx.beginPath();
-    ctx.moveTo(ship.x + d.x * 12, ship.y + d.y * 12);
+    ctx.moveTo(origin.x + d.x * nose, origin.y + d.y * nose);
     ctx.lineTo(ex, ey);
     ctx.stroke();
     ctx.setLineDash([]);
@@ -535,15 +711,15 @@ export class Renderer {
     }
 
     if (ship.thrustLevel > 0.02) {
-      const flame = ship.thrustLevel * (ship.boosting ? 15 : 10);
+      const flame = ship.thrustLevel * (ship.boosting ? 25 : 17);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.5 + ship.thrustLevel * 0.45;
       ctx.fillStyle = ship.boosting ? '#ffd27a' : '#75e5ff';
-      ctx.fillRect(-11 - flame, -2.2, flame, 1.5);
-      ctx.fillRect(-11 - flame * 0.75, 1.2, flame * 0.75, 1.5);
+      ctx.fillRect(-20 - flame, -3, flame, 2);
+      ctx.fillRect(-20 - flame * 0.75, 1, flame * 0.75, 2);
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(-11 - flame * 0.35, -0.8, flame * 0.35, 1.6);
+      ctx.fillRect(-20 - flame * 0.35, -1, flame * 0.35, 2);
       ctx.restore();
     }
 
@@ -551,39 +727,119 @@ export class Renderer {
       ctx.strokeStyle = '#9edff0';
       ctx.lineWidth = Math.max(0.7, 1 / zoom);
       ctx.beginPath();
-      ctx.moveTo(-4, 3); ctx.lineTo(-5, 7);
-      ctx.moveTo(4, 3); ctx.lineTo(5, 7);
-      ctx.moveTo(-7, 7); ctx.lineTo(-3, 7);
-      ctx.moveTo(3, 7); ctx.lineTo(7, 7);
+      ctx.moveTo(-7, 5); ctx.lineTo(-8, 12);
+      ctx.moveTo(7, 5); ctx.lineTo(8, 12);
+      ctx.moveTo(-12, 12); ctx.lineTo(-5, 12);
+      ctx.moveTo(5, 12); ctx.lineTo(12, 12);
       ctx.stroke();
     }
 
-    ctx.drawImage(this.shipSprite, -11, -7, 22, 14);
+    ctx.drawImage(this.shipSprite, -22, -14, 44, 28);
+
+    if (ship.clamped) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = '#8affc1';
+      ctx.globalAlpha = 0.65 + Math.sin(time * 5) * 0.2;
+      ctx.lineWidth = Math.max(0.8, 1.4 / zoom);
+      for (const x of [-8, 8]) {
+        ctx.beginPath();
+        ctx.moveTo(x - 3, 12);
+        ctx.lineTo(x, 15);
+        ctx.lineTo(x + 3, 12);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     if (ship.invulnerable > 0 && Math.sin(time * 18) > 0) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = 'rgba(140,234,255,0.55)';
       ctx.lineWidth = Math.max(0.7, 1 / zoom);
       ctx.beginPath();
-      ctx.arc(0, 0, 12, 0, TAU);
+      ctx.arc(0, 0, 22, 0, TAU);
       ctx.stroke();
     }
     ctx.restore();
   }
 
+  drawEVA(ctx, ship, time) {
+    const e = ship.eva;
+    if (!e?.active) return;
+    const zoom = this.camera.zoom;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(140,234,255,0.55)';
+    ctx.lineWidth = Math.max(0.6, 1 / zoom);
+    ctx.setLineDash([3 / zoom, 5 / zoom]);
+    ctx.beginPath();
+    ctx.moveTo(ship.x, ship.y);
+    ctx.lineTo(e.x, e.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.rotate(Math.atan2(e.vy, e.vx));
+    ctx.fillStyle = '#d9f6ff';
+    ctx.fillRect(-2, -3, 5, 6);
+    ctx.fillStyle = '#8ceaff';
+    ctx.fillRect(1, -2, 3, 4);
+    ctx.fillStyle = '#40566e';
+    ctx.fillRect(-4, -2, 2, 4);
+    ctx.fillRect(-2, 3, 2, 3);
+    ctx.fillRect(1, 3, 2, 3);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.22 + Math.sin(time * 4) * 0.04;
+    ctx.fillStyle = '#ffe7a3';
+    ctx.beginPath();
+    ctx.moveTo(3, -1);
+    ctx.lineTo(20 / zoom, -7 / zoom);
+    ctx.lineTo(20 / zoom, 7 / zoom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.restore();
+  }
+
+  drawOrbitHold(ctx, game) {
+    const hold = game.ship.orbitHold;
+    if (!hold) return;
+    const record = this.world.recordsById.get(hold.recordId);
+    if (!record) return;
+    const zoom = this.camera.zoom;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = '#8ceaff';
+    ctx.globalAlpha = 0.24;
+    ctx.lineWidth = Math.max(0.6, 1 / zoom);
+    ctx.setLineDash([8 / zoom, 12 / zoom]);
+    ctx.beginPath();
+    ctx.arc(record.x, record.y, hold.radius, 0, TAU);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
   drawBodyLabels(ctx, game) {
-    if (this.camera.zoom > 0.92) return;
+    if (this.camera.zoom > 0.62) return;
     ctx.save();
     ctx.font = '9px "Courier New", monospace';
     ctx.textAlign = 'left';
-    for (const body of this.world.bodies) {
-      const p = this.worldToScreen(body.x, body.y);
+    for (const record of this.world.tracked) {
+      const p = this.worldToScreen(record.x, record.y);
       if (p.x < -80 || p.x > this.canvas.width + 80 || p.y < -40 || p.y > this.canvas.height + 40) continue;
-      const known = body.discovered;
-      const distance = Math.hypot(game.ship.x - body.x, game.ship.y - body.y) - body.radius;
-      const label = known ? body.name : 'UNSURVEYED MASS';
-      const sub = known ? `${body.type.toUpperCase()} · ${formatDistance(distance)}` : 'GRAVITY SIGNATURE';
+      const distance = Math.hypot(game.ship.x - record.x, game.ship.y - record.y) - record.radius;
+      const known = record.catalogued || record.scanned;
+      if (!known && (!record.discovered || distance > 1500)) continue;
+      const label = known ? record.name : 'UNCatalogued MASS';
+      const sub = known
+        ? `${record.type.toUpperCase()} · ${formatDistance(distance)}`
+        : `GRAVITY ECHO · ${formatDistance(distance)} · N TO SCAN`;
       ctx.globalAlpha = known ? 0.85 : 0.42;
-      ctx.strokeStyle = known ? body.glow : '#60798c';
+      ctx.strokeStyle = known ? record.glow : '#60798c';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(p.x + 10, p.y - 12);
@@ -606,8 +862,8 @@ export class Renderer {
       arrow(ctx, p.x, p.y, p.x + d.x * l, p.y + d.y * l, 'rgba(140,234,255,0.72)', 'V');
     }
     const g = ship.metrics?.gravityVector;
-    if (g && g.magnitude > 0.15) {
-      const l = clamp(g.magnitude * 1.9, 8, 48);
+    if (g && g.magnitude > 0.015) {
+      const l = clamp(g.magnitude * 26, 8, 48);
       const d = norm(g.x, g.y, 0, 1);
       arrow(ctx, p.x, p.y, p.x + d.x * l, p.y + d.y * l, 'rgba(255,198,109,0.62)', 'G');
     }
@@ -631,7 +887,8 @@ export class Renderer {
     ctx.moveTo(p.x - w, p.y + h - 5); ctx.lineTo(p.x - w, p.y + h); ctx.lineTo(p.x - w + 8, p.y + h);
     ctx.moveTo(p.x + w - 8, p.y + h); ctx.lineTo(p.x + w, p.y + h); ctx.lineTo(p.x + w, p.y + h - 5);
     ctx.stroke();
-    ctx.fillText(dock.ready ? 'MARKET LINK · T' : `SLOW TO DOCK · ${dock.speed.toFixed(1)} m/s`, p.x, p.y - 18);
+    const cue = dock.clamped ? 'PAD CLAMP · T TRADE / L RELEASE' : dock.ready ? 'MARKET LINK · T' : `SLOW TO DOCK · ${dock.speed.toFixed(1)} m/s`;
+    ctx.fillText(cue, p.x, p.y - 18);
     ctx.restore();
   }
 
@@ -687,11 +944,15 @@ export class Renderer {
     ctx.save();
     ctx.translate(shakeX, shakeY);
     this.applyWorldTransform(ctx);
+    this.drawOrbitLanes(ctx, this.world, game.time);
+    this.drawProxies(ctx, this.world, game.time);
+    this.drawHaulers(ctx, this.world, game.time);
     this.drawCometTails(ctx, this.world, game.time);
     this.drawGravityRings(ctx, game);
     this.drawGravityField(ctx, game);
     this.drawBodyGlows(ctx);
     this.drawBodies(ctx);
+    this.drawOrbitHold(ctx, game);
     this.drawHotCells(ctx, game);
     this.drawDocksAndLights(ctx, game.time);
     this.drawAnomalies(ctx, this.world, game.time);
@@ -701,6 +962,7 @@ export class Renderer {
     this.drawProjectiles(ctx, game.combat);
     this.drawEnemies(ctx, game.combat);
     this.drawShip(ctx, game.ship, game.time);
+    this.drawEVA(ctx, game.ship, game.time);
     ctx.restore();
 
     this.drawScreenOverlays(ctx, game);

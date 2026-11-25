@@ -1,11 +1,12 @@
 import { clamp, dot, lerp, norm } from '../core/math.js';
 
+// Larger, more detailed hull. The gear points define the magnetic clamp footprint.
 const HULL_POINTS = [
-  [9, 0], [5, -3], [0, -4], [-5, -3], [-8, -1],
-  [-8, 1], [-5, 3], [0, 4], [5, 3]
+  [15, 0], [9, -5], [0, -7], [-9, -5], [-13, -2],
+  [-13, 2], [-9, 5], [0, 7], [9, 5]
 ];
 const GEAR_POINTS = [
-  [-5, 7], [5, 7]
+  [-8, 12], [8, 12]
 ];
 
 function transformPoint(ship, ox, oy, px, py) {
@@ -18,6 +19,14 @@ export function resolveTerrainCollision(ship, world) {
   ship.contact = false;
   ship.contactBody = null;
   ship.contactNormal = null;
+
+  // A clamped ship is kinematically held by the pad until the pilot releases it.
+  if (ship.padClamp && ship.gear && !ship.requestingLaunch) {
+    ship.contact = true;
+    ship.contactBody = ship.padClamp.body;
+    ship.contactNormal = ship.padClamp.normal || norm(0, -1, 0, -1);
+    return false;
+  }
 
   if (ship.landed && ship.gear && !ship.requestingLaunch && ship.landedBody) {
     ship.contact = true;
@@ -89,8 +98,8 @@ export function resolveTerrainCollision(ship, world) {
   const tx = rvx - vn * n.x;
   const ty = rvy - vn * n.y;
   const horizontal = Math.hypot(tx, ty);
-  const restitution = ship.gear ? 0.055 : 0.2;
-  const friction = ship.gear ? 0.48 : 0.88;
+  const restitution = ship.gear ? 0.035 : 0.18;
+  const friction = ship.gear ? 0.36 : 0.86;
 
   if (vn < 0) {
     const newVX = tx * friction - vn * restitution * n.x;
@@ -135,17 +144,23 @@ export function resolveTerrainCollision(ship, world) {
 
   if (canLand && !ship.landed && ship.touchdownCooldown <= 0) {
     const quality = clamp(100 - impactSpeed * 24 - horizontal * 14 - (1 - align) * 72, 0, 100);
+    const landing = { impactSpeed, horizontal, align };
+    const clamped = typeof world.clampToPad === 'function' ? world.clampToPad(ship, contactBody, landing) : false;
     ship.landed = true;
     ship.landedBody = contactBody;
-    ship.vx = bodyVX;
-    ship.vy = bodyVY;
     ship.omega = 0;
     ship.touchdownCooldown = 1.15;
-    ship.lastLanding = { body: contactBody, quality, vertical: impactSpeed, horizontal, align, time: world.time };
-    world.pushEvent({ type: 'touchdown', x: contactX, y: contactY, body: contactBody, quality, vertical: impactSpeed, horizontal });
-    const label = quality > 86 ? 'PRECISION TOUCHDOWN' : 'SAFE TOUCHDOWN';
+    ship.lastLanding = { body: contactBody, quality, vertical: impactSpeed, horizontal, align, time: world.time, clamped: Boolean(clamped) };
+    if (!clamped) {
+      ship.clamped = false;
+      ship.padClamp = null;
+      ship.vx = bodyVX;
+      ship.vy = bodyVY;
+    }
+    world.pushEvent({ type: 'touchdown', x: contactX, y: contactY, body: contactBody, quality, vertical: impactSpeed, horizontal, clamped: Boolean(clamped) });
+    const label = clamped ? 'PAD CLAMP ENGAGED' : quality > 86 ? 'PRECISION TOUCHDOWN' : 'SAFE TOUCHDOWN';
     ship.notify(`${label}  ${impactSpeed.toFixed(1)} m/s  ${quality.toFixed(0)}%`, 'good', {
-      type: 'landing', body: contactBody, quality, vertical: impactSpeed, horizontal
+      type: 'landing', body: contactBody, quality, vertical: impactSpeed, horizontal, clamped: Boolean(clamped)
     });
   }
 

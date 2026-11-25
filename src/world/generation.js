@@ -42,14 +42,57 @@ function anchorCore(body, radius) {
   }
 }
 
+function paintCaveEcology(body, config) {
+  if (!config.biome) return;
+  const rng = new Rng(body.seed ^ 0xb10e);
+  const cx = body.w / 2;
+  const cy = body.h / 2;
+  const patches = Math.max(4, Math.round(body.radius / 42));
+  for (let k = 0; k < patches; k++) {
+    const a = rng.range(0, TAU);
+    const d = rng.range(body.radius * 0.24, body.radius * 0.76);
+    const px = cx + Math.cos(a) * d;
+    const py = cy + Math.sin(a) * d;
+    const r = rng.range(5, Math.max(7, body.radius * 0.075));
+    const kind = rng.chance(0.46) ? MAT.BIOMASS : rng.chance(0.45) ? MAT.WATER : MAT.EXOTIC_DUST;
+    for (let y = Math.floor(py - r); y <= Math.ceil(py + r); y++) {
+      for (let x = Math.floor(px - r); x <= Math.ceil(px + r); x++) {
+        if (Math.hypot(x - px, y - py) > r * (0.72 + hash2(x, y, body.seed + 991) * 0.28)) continue;
+        const i = body.index(x, y);
+        if (i < 0 || body.mat[i] !== MAT.VACUUM) continue;
+        if (hash2(x, y, body.seed + 997) < 0.22) continue;
+        body.put(x, y, kind, { heat: kind === MAT.WATER ? 12 : 9 });
+      }
+    }
+  }
+}
+
+function paintDerelict(body, config) {
+  if (!config.derelict) return;
+  const rng = new Rng(body.seed ^ 0xde11);
+  const cx = body.w / 2;
+  const cy = body.h / 2;
+  const a = rng.range(0, TAU);
+  const d = body.radius * rng.range(0.58, 0.9);
+  const px = cx + Math.cos(a) * d;
+  const py = cy + Math.sin(a) * d;
+  const ux = Math.cos(a + Math.PI / 2);
+  const uy = Math.sin(a + Math.PI / 2);
+  paintLine(body, px - ux * 18, py - uy * 18, px + ux * 18, py + uy * 18, MAT.METAL, 3);
+  paintLine(body, px - ux * 15, py - uy * 15 - 2, px + ux * 15, py + uy * 15 - 2, MAT.SCRAP, 1);
+  paintBlock(body, px, py, 7, MAT.GLASS, { heat: 10 });
+  paintBlock(body, px - ux * 12, py - uy * 12, 3, MAT.LAMP);
+  paintLine(body, px + ux * 17, py + uy * 17, px + ux * 28, py + uy * 28 + 5, MAT.SCRAP, 2);
+}
+
 function buildMoonOutpost(body) {
   const cx = body.w / 2;
   const cy = body.h / 2;
   const dockY = Math.round(cy - body.radius - 5);
 
-  paintRect(body, cx - 46, dockY, cx + 46, dockY + 5, MAT.METAL);
-  paintRect(body, cx - 42, dockY + 1, cx + 42, dockY + 3, MAT.SLAG);
-  for (let x = cx - 40; x <= cx + 40; x += 10) body.put(x, dockY - 1, MAT.LAMP);
+  paintRect(body, cx - 62, dockY, cx + 62, dockY + 5, MAT.METAL);
+  paintRect(body, cx - 58, dockY + 1, cx + 58, dockY + 3, MAT.SLAG);
+  for (let x = cx - 56; x <= cx + 56; x += 10) body.put(x, dockY - 1, MAT.LAMP);
 
   // A compact exchange tower is offset from the clear landing lane.
   paintRect(body, cx + 27, dockY - 10, cx + 43, dockY - 1, MAT.METAL);
@@ -59,10 +102,10 @@ function buildMoonOutpost(body) {
   body.put(cx - 38, dockY - 4, MAT.LAMP);
 
   // Struts visually tie the platform to the regolith and act as structural anchors.
-  for (const sx of [cx - 34, cx - 18, cx + 18, cx + 34]) {
+  for (const sx of [cx - 48, cx - 24, cx, cx + 24, cx + 48]) {
     paintRect(body, sx - 1, dockY + 5, sx + 1, dockY + 22, MAT.METAL);
   }
-  for (let x = cx - 44; x <= cx + 44; x += 4) {
+  for (let x = cx - 60; x <= cx + 60; x += 4) {
     const i = body.index(x, dockY + 2);
     if (i >= 0) body.anchors.push(i);
   }
@@ -71,7 +114,10 @@ function buildMoonOutpost(body) {
     if (i >= 0) body.anchors.push(i);
   }
 
-  body.dock = { x: cx, y: dockY - 8, width: 76, height: 16 };
+  body.dock = {
+    x: cx, y: dockY - 10, width: 116, height: 18,
+    clamp: { x: cx, y: dockY - 12, width: 108, normalX: 0, normalY: -1 }
+  };
 }
 
 function generateMoon(body) {
@@ -321,9 +367,9 @@ function generateStation(body, config) {
   }
 
   // Docking platform and a central spine down into the hub. No structure blocks the landing lane.
-  paintRect(body, cx - 48, dockY, cx + 48, dockY + 6, MAT.METAL);
-  paintRect(body, cx - 44, dockY + 1, cx + 44, dockY + 3, MAT.SLAG);
-  for (let x = cx - 40; x <= cx + 40; x += 10) body.put(x, dockY - 1, MAT.LAMP);
+  paintRect(body, cx - 64, dockY, cx + 64, dockY + 6, MAT.METAL);
+  paintRect(body, cx - 60, dockY + 1, cx + 60, dockY + 3, MAT.SLAG);
+  for (let x = cx - 56; x <= cx + 56; x += 10) body.put(x, dockY - 1, MAT.LAMP);
   for (let y = dockY + 6; y < cy - hubR + 3; y++) {
     body.put(cx - 8, y, MAT.METAL);
     body.put(cx + 8, y, MAT.METAL);
@@ -365,7 +411,10 @@ function generateStation(body, config) {
     paintRect(body, cx - 21, cy + hubR * 0.42, cx + 21, cy + hubR * 0.43, MAT.METAL);
   }
 
-  body.dock = { x: cx, y: dockY - 9, width: 88, height: 16 };
+  body.dock = {
+    x: cx, y: dockY - 10, width: 120, height: 18,
+    clamp: { x: cx, y: dockY - 12, width: 112, normalX: 0, normalY: -1 }
+  };
   body.structural = false;
 }
 
@@ -389,6 +438,8 @@ export function generateBody(config) {
       generateAsteroid(body);
       break;
   }
+  paintCaveEcology(body, config);
+  paintDerelict(body, config);
   body.finishGeneration();
   return body;
 }

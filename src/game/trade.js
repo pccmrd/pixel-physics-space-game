@@ -36,7 +36,10 @@ export class TradeSystem {
     if (!this.open) return;
     this.open = false;
     this.ui.showTrade(false);
-    if (!silent) this.ui.log('DOCK CLAMPS RELEASED', '');
+    if (!silent) {
+      if (this.ship.padClamp) this.ship.releaseClamp(this.world);
+      this.ui.log('DOCK LINK CLOSED', '');
+    }
   }
 
   toggle() {

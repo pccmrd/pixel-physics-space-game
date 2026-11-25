@@ -311,6 +311,36 @@ export class ParticleSystem {
       case 'launch':
         this.emitTouchdown(event);
         break;
+      case 'scanPulse':
+        this.emitShockwave(event.x, event.y, Math.min(180, event.radius || 80), '#8ceaff');
+        break;
+      case 'scanResult':
+        this.emitCollect(event.x, event.y, 'exotic');
+        break;
+      case 'clamp':
+        for (let k = 0; k < 10; k++) {
+          this.spawn({
+            type: 'spark', x: event.x, y: event.y,
+            vx: this.rng.range(-24, 24), vy: this.rng.range(-24, 24),
+            life: this.rng.range(0.2, 0.55), size: this.rng.range(0.7, 1.6),
+            color: '#8ceaff', glow: true, drag: 0.6
+          });
+        }
+        break;
+      case 'caveFind':
+        this.emitShockwave(event.x, event.y, event.radius || 28, '#8affc1');
+        this.emitCollect(event.x, event.y, 'exotic');
+        break;
+      case 'haulerDelivery':
+        this.emitShockwave(event.x, event.y, event.radius || 44, '#ffc66d');
+        break;
+      case 'orbitHold':
+        this.emitShockwave(event.x, event.y, 30, '#8ceaff');
+        break;
+      case 'evaStart':
+      case 'evaEnd':
+        this.emitCollect(event.x, event.y, 'alloy');
+        break;
       default:
         break;
     }

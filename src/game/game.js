@@ -46,11 +46,11 @@ export class Game {
     this.respawnCooldown = 0;
 
     this.objectiveTexts = [
-      'Land manually on a material surface: gear down, low descent rate, legs toward ground.',
-      'Grind or melt at least 20 pixels, then collect 6 cargo units with the R magnetic scoop.',
-      'Dock quietly at a lit exchange pad and sell cargo with T.',
-      'Survey the Vela cryo anomaly and disable two hostile drones.',
-      'Free flight: carve caves, collapse unsupported monoliths, melt hulls, trade and explore.'
+      '2035 lunar orbit: land manually on a hauled asteroid or pad. Use N to scan uncatalogued masses.',
+      'Grind or melt 20 pixels, then collect 6 cargo units with the R magnetic scoop. EVA caves with G after O orbit hold.',
+      'Dock quietly at a lit exchange pad. Electromagnetic clamps hold the ship steady; press L or ESC to release.',
+      'Survey the Vela cryo anomaly, scan cave biomes and disable two hostile drones.',
+      'Free flight: scan, mine, capture, scavenge and carve caves across the continuous Luna-orbit belt.'
     ];
     this.objectiveLabels = [
       'MANUAL TOUCHDOWN', 'MATERIAL HARVEST', 'FIRST EXCHANGE', 'DEEP SURVEY'
@@ -67,11 +67,23 @@ export class Game {
       soldUnits: 0
     };
 
-    this.ui.log('PIXEL MATERIAL FIELD ONLINE', 'good');
-    this.ui.log('SIX GRAVITY WELLS · CONTINUOUS SURFACE SIMULATION', '');
-    this.ui.log('W/S THRUST · A/D TORQUE · Q/E RCS · H FOR REFERENCE', '');
+    this.ui.log('PIXEL MATERIAL FIELD ONLINE · YEAR 2035', 'good');
+    this.ui.log('LUNA ORBIT · 320 HAULED BODIES · 95% UNCATALOGUED', '');
+    this.ui.log('N SCAN · O SLOW ORBIT · G EVA · L RELEASE CLAMP · H REFERENCE', '');
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
+  }
+
+  scanPulse() {
+    const results = this.world.scanPulse(this.ship, 1250, 10);
+    this.audio.play('scan');
+    if (!results.length) {
+      this.ui.log('SURVEY PULSE · NO NEW SIGNATURES IN RANGE', '');
+      return results;
+    }
+    const stats = this.world.catalogStats();
+    this.ui.log(`SURVEY PULSE · ${results.length} NEW CATALOG ENTRIES · ${stats.uncatalogued} STILL UNCATALOGUED`, 'good');
+    return results;
   }
 
   setTool(tool) {
@@ -115,6 +127,7 @@ export class Game {
       this.audio.play('ui');
     }
     if (input.consumePress('KeyV')) {
+      if (this.ship.padClamp && this.ship.gear) this.ship.clampReleaseRequested = true;
       this.ship.gear = !this.ship.gear;
       this.ship.notify(`LANDING GEAR ${this.ship.gear ? 'DOWN' : 'UP'}`, '', { type: 'gear' });
       this.audio.play('ui');
@@ -122,6 +135,30 @@ export class Game {
     if (input.consumePress('KeyR')) {
       this.ship.scoop = !this.ship.scoop;
       this.ship.notify(`MAGNETIC SCOOP ${this.ship.scoop ? 'ON' : 'OFF'}`, this.ship.scoop ? 'good' : '', { type: 'scoop' });
+      this.audio.play('ui');
+    }
+    if (input.consumePress('KeyN')) {
+      this.scanPulse();
+    }
+    if (input.consumePress('KeyO')) {
+      const engaged = this.ship.toggleOrbitHold(this.world);
+      this.ui.log(engaged ? 'SLOW ORBIT AUTOPILOT ENGAGED' : 'SLOW ORBIT HOLD TOGGLED OFF', engaged ? 'good' : '');
+      this.audio.play('ui');
+    }
+    if (input.consumePress('KeyG')) {
+      const wasEVA = this.ship.eva.active;
+      const ok = this.ship.startEVA(this.world);
+      this.ui.log(wasEVA ? 'EVA SUIT RETURNING TO AIRLOCK' : ok ? 'EVA TETHER DEPLOYED' : 'EVA UNAVAILABLE — ENGAGE O ORBIT HOLD FIRST', ok ? 'good' : 'warn');
+      this.audio.play('ui');
+    }
+    if (input.consumePress('KeyL')) {
+      if (this.trade.open) this.trade.close(true);
+      if (this.ship.padClamp) {
+        this.ship.clampReleaseRequested = true;
+        this.ui.log('PAD CLAMPS RELEASING — CLEAR THE LANDING LANE', '');
+      } else {
+        this.ui.log('NO ELECTROMAGNETIC PAD CLAMP ENGAGED', '');
+      }
       this.audio.play('ui');
     }
 
@@ -141,10 +178,11 @@ export class Game {
 
   computeAim() {
     const forward = this.ship.forwardVector();
+    const origin = this.ship.eva?.active ? this.ship.eva : this.ship;
     if (this.input.pointer.inside) {
       const point = this.renderer.screenToWorld(this.input.pointer.x, this.input.pointer.y);
       this.aimPoint = point;
-      const d = norm(point.x - this.ship.x, point.y - this.ship.y, forward.x, forward.y);
+      const d = norm(point.x - origin.x, point.y - origin.y, forward.x, forward.y);
       this.aimDir = d.l > 4 ? { x: d.x, y: d.y } : forward;
     } else {
       this.aimPoint = null;
@@ -160,31 +198,36 @@ export class Game {
     const modalOpen = this.trade.open || this.ui.helpOpen || this.ui.mapOpen;
     const primary = this.input.isDown('Mouse0') || this.input.isDown('KeyF');
     const cannonHeld = this.input.isDown('Space') || this.input.isDown('Mouse2') || (this.ship.tool === 'cannon' && primary);
+    const eva = Boolean(this.ship.eva?.active);
+    const origin = eva ? this.ship.eva : this.ship;
 
-    if (!modalOpen && cannonHeld) {
+    if (!modalOpen && cannonHeld && !eva) {
       this.combat.fireCannon(aimDir);
     }
 
     if (!modalOpen && primary && this.ship.tool !== 'cannon') {
       const laser = this.ship.tool === 'laser';
-      const cost = (laser ? 15 : 5) * dt;
+      const cost = (laser ? 15 : 5) * dt * (eva ? 0.45 : 1);
       if (this.ship.consumeEnergy(cost)) {
-        const range = laser ? 110 : 42;
-        const hit = this.world.raycast(this.ship.x, this.ship.y, aimDir.x, aimDir.y, range);
-        const x1 = this.ship.x + aimDir.x * 10;
-        const y1 = this.ship.y + aimDir.y * 10;
-        const x2 = hit ? hit.x : this.ship.x + aimDir.x * range;
-        const y2 = hit ? hit.y : this.ship.y + aimDir.y * range;
+        const range = eva ? (laser ? 34 : 18) : laser ? 110 : 42;
+        const hit = this.world.raycast(origin.x, origin.y, aimDir.x, aimDir.y, range);
+        const nose = eva ? 4 : 15;
+        const x1 = origin.x + aimDir.x * nose;
+        const y1 = origin.y + aimDir.y * nose;
+        const x2 = hit ? hit.x : origin.x + aimDir.x * range;
+        const y2 = hit ? hit.y : origin.y + aimDir.y * range;
         this.beam = { active: true, tool: this.ship.tool, x1, y1, x2, y2, hit: Boolean(hit) };
         this.ship.heat = clamp(this.ship.heat + (laser ? 9 : 2.5) * dt, 0, 100);
 
         if (laser) {
           this.laserActive = true;
-          const terrainDistance = hit ? hit.distance : range;
-          this.combat.laserDamage(aimDir, range, 38, dt, terrainDistance);
-          if (hit) this.world.heatHit(hit, 2.7, 900 * dt, 110 * dt, 'laser');
+          if (!eva) {
+            const terrainDistance = hit ? hit.distance : range;
+            this.combat.laserDamage(aimDir, range, 38, dt, terrainDistance);
+          }
+          if (hit) this.world.heatHit(hit, eva ? 1.6 : 2.7, (eva ? 350 : 900) * dt, (eva ? 42 : 110) * dt, 'laser');
         } else if (hit) {
-          this.world.grindHit(hit, 2.2, 145 * dt);
+          this.world.grindHit(hit, eva ? 1.3 : 2.2, (eva ? 72 : 145) * dt);
         }
 
         if (hit && this.toolParticleTimer <= 0) {
@@ -265,6 +308,28 @@ export class Game {
         case 'launch':
           this.audio.play('ui');
           break;
+        case 'scanResult':
+          this.ui.log(event.text || 'SURVEY LOCK', event.tone || 'good');
+          break;
+        case 'clamp':
+          this.ui.log(event.text || 'ELECTROMAGNETIC PAD CLAMPS ENGAGED', 'good');
+          this.audio.play('clamp');
+          this.renderer.addShake(0.35);
+          break;
+        case 'caveFind':
+          this.ui.log(event.text || 'CAVE SAMPLE RECOVERED', 'good');
+          this.audio.play('trade');
+          this.renderer.addShake(0.6);
+          break;
+        case 'haulerDelivery':
+          this.ui.log(event.text || 'AUTO HAULER DELIVERY', 'good');
+          this.audio.play('ui');
+          break;
+        case 'orbitHold':
+        case 'evaStart':
+        case 'evaEnd':
+        case 'scanPulse':
+          break;
         default:
           break;
       }
@@ -336,10 +401,11 @@ export class Game {
     this.collectSoundCooldown = Math.max(0, this.collectSoundCooldown - dt);
     this.respawnCooldown = Math.max(0, this.respawnCooldown - dt);
 
+    this.world.preUpdate(dt, this.ship);
     this.ship.update(dt, this.input, this.world);
     this.updateTools(dt, this.aimDir);
     this.combat.update(dt);
-    this.world.update(dt, this.ship);
+    this.world.update(dt, this.ship, { preUpdated: true });
     this.particles.update(dt, this.world, this.ship);
     this.ship.docked = this.world.findDock(this.ship);
     this.handleWorldEvents();
